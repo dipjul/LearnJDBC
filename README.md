@@ -82,76 +82,181 @@ There are following six steps involved in building a JDBC application:
 <hr>
 
 ## Sample Code
+**Note**: *Code is not tested and is only meant for showcasing how to use the methods available in JDBC*
 ```java
 import java.sql.*; // for standard JDBC programs
 public class FirstExample {
-  // JDBC driver name and database URL
-  static final String JDBC_DRIVER = "com.mysql.jdbc.Driver";
-  static final String DB_URL = "jdbc:mysql://localhost/EMP";
-  // Database credentials
-  static final String USER = "username";
-  static final String PASS = "password";
+    // JDBC driver name and database URL
+    static final String JDBC_DRIVER = "com.mysql.jdbc.Driver";
+    static final String DB_URL = "jdbc:mysql://localhost/EMP";
+    // Database credentials
+    static final String USER = "username";
+    static final String PASS = "password";
 
-  public static void main(String[] args) {
-      Connection conn = null;
-      Statement stmt = null;
-      try {
-        //STEP 2: Register JDBC driver
-        Class.forName("com.mysql.jdbc.Driver");
-        // or use the below two lines
-        // Driver myDriver = new oracle.jdbc.driver.OracleDriver();
-        // DriverManager.registerDriver( myDriver );
-        
-        //STEP 3: Open a connection
-        System.out.println("Connecting to database...");
-        conn = DriverManager.getConnection(DB_URL, USER, PASS);
-        // Other ways:
+    public static void main(String[] args) {
+        Connection conn = null;
+        Statement stmt = null;
+        /* Statement:
+         * Use this for general-purpose access to your database. 
+         * Useful when you are using static SQL statements at runtime. 
+         * The Statement interface cannot accept parameters.
+         */
 
-        // DriverManager.getConnection(String url);
-        // String URL = "jdbc:oracle:thin:username/password@amrood:1521:EMP";
-        // conn = DriverManager.getConnection(URL);
+        PreparedStatement pstmt = null;
+        /* PreparedStatement:
+         * Use this when you plan to use the SQL statements many times. 
+         * The PreparedStatement interface accepts input parameters at runtime.
+         */
 
-        // DriverManager.getConnection(String url, Properties info);
-        // String URL = "jdbc:oracle:thin:@amrood:1521:EMP";
-        // Properties info = new Properties( );
-        // info.put( "user", "username" );
-        // info.put( "password", "password" );
-        // conn = DriverManager.getConnection(URL, info);
+        CallableStatement cstmt = null;
+        /*
+         * CallableStatement: 
+         * Use this when you want to access the database stored procedures. 
+         * The CallableStatement interface can also accept runtime input parameters.
+         */
 
-        //STEP 4: Execute a query
-        System.out.println("Creating statement...");
-        stmt = conn.createStatement();
-        // stmt = conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
-        // stmt = conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
-        String sql;
-        sql = "SELECT id, first, last, age FROM Employees";
-        ResultSet rs = stmt.executeQuery(sql);
-        // Move cursor to the last row.
-        // System.out.println("Moving cursor to the last...");
-        // rs.last();
-        // Move cursor to the first row.
-        // System.out.println("Moving cursor to the first row...");
-        // rs.first();
-        //STEP 5: Extract data from result set
-        while (rs.next()) {
-          //Retrieve by column name
-          int id = rs.getInt("id");
-          int age = rs.getInt("age");
-          String first = rs.getString("first");
-          String last = rs.getString("last");
-          //Display values
-          System.out.print("ID: " + id);
-          System.out.print(", Age: " + age);
-          System.out.print(", First: " + first);
-          System.out.println(", Last: " + last);
+        try {
+            //STEP 2: Register JDBC driver
+            Class.forName("com.mysql.jdbc.Driver");
+            // or use the below two lines
+            // Driver myDriver = new oracle.jdbc.driver.OracleDriver();
+            // DriverManager.registerDriver( myDriver );
+
+            //STEP 3: Open a connection
+            System.out.println("Connecting to database...");
+            conn = DriverManager.getConnection(DB_URL, USER, PASS);
+            // Other ways:
+
+            // DriverManager.getConnection(String url);
+            // String URL = "jdbc:oracle:thin:username/password@amrood:1521:EMP";
+            // conn = DriverManager.getConnection(URL);
+
+            // DriverManager.getConnection(String url, Properties info);
+            // String URL = "jdbc:oracle:thin:@amrood:1521:EMP";
+            // Properties info = new Properties( );
+            // info.put( "user", "username" );
+            // info.put( "password", "password" );
+            // conn = DriverManager.getConnection(URL, info);
+
+            /*Transactions */
+            conn.setAutoCommit(false);
+            // conn.commit( );
+            // conn.rollback( );
+
+            //STEP 4: Execute a query
+            /*Statement */
+            System.out.println("Creating statement...");
+            stmt = conn.createStatement();
+
+            // stmt = conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+            // stmt = conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
+
+            String sql = "SELECT id, first, last, age FROM Employees";
+
+            ResultSet rs = stmt.executeQuery(sql); // Returns a ResultSet object. Use this method when you expect to get a result set.
+
+            Boolean ret = stmt.execute(sql); // Returns a boolean value of true if a ResultSet object can be retrieved; otherwise, it returns false.
+
+            int rows = stmt.executeUpdate(sql); // Returns the number of rows affected by the execution of the SQL statement
+
+            // Move cursor to the last row.
+            System.out.println("Moving cursor to the last...");
+            rs.last();
+            // Move cursor to the first row.
+            System.out.println("Moving cursor to the first row...");
+            rs.first();
+            //STEP 5: Extract data from result set
+            while (rs.next()) {
+                //Retrieve by column name
+                int id = rs.getInt("id");
+                int age = rs.getInt("age");
+                String first = rs.getString("first");
+                String last = rs.getString("last");
+                //Display values
+                System.out.print("ID: " + id);
+                System.out.print(", Age: " + age);
+                System.out.print(", First: " + first);
+                System.out.println(", Last: " + last);
+            }
+
+            /* PreparedStatement */
+            //STEP 4: Execute a query
+            System.out.println("Creating statement...");
+            String sqlForPstmt = "UPDATE Employees set age=? WHERE id=?";
+            pstmt = conn.prepareStatement(sqlForPstmt);
+
+            //Bind values into the parameters.
+            pstmt.setInt(1, 35); // This would set age
+            pstmt.setInt(2, 102); // This would set ID
+
+            // Let us update age of the record with ID = 102;
+            int prows = pstmt.executeUpdate();
+            System.out.println("Rows impacted : " + rows);
+            // Let us select all the records and display them.
+            psql = "SELECT id, first, last, age FROM Employees";
+            ResultSet prs = pstmt.executeQuery(sql);
+            //STEP 5: Extract data from result set
+            while (prs.next()) {
+                //Retrieve by column name
+                int id = prs.getInt("id");
+                int age = prs.getInt("age");
+                String first = prs.getString("first");
+                String last = prs.getString("last");
+                //Display values
+                System.out.print("ID: " + id);
+                System.out.print(", Age: " + age);
+                System.out.print(", First: " + first);
+                System.out.println(", Last: " + last);
+            }
+
+            /* Callable Statement Example */
+            System.out.println("Creating statement...");
+            String sqlForCallableStmt = "{call getEmpName (?, ?)}";
+            cstmt = conn.prepareCall(sqlForCallableStmt);
+
+            //Bind IN parameter first, then bind OUT parameter
+            int empID = 102;
+            cstmt.setInt(1, empID); // This would set ID as 102
+            // Because second parameter is OUT so register it
+            cstmt.registerOutParameter(2, java.sql.Types.VARCHAR);
+
+            //Use execute method to run stored procedure.
+            System.out.println("Executing stored procedure...");
+            cstmt.execute();
+            //Retrieve employee name with getXXX method
+            String empName = cstmt.getString(2);
+            System.out.println("Emp Name with ID:" +
+                empID + " is " + empName);
+
+            /* Savepont */
+            Savepoint savepoint1 = conn.setSavepoint("ROWS_DELETED_1");
+            System.out.println("Deleting row....");
+            // Assume we delete some stuffs here
+            conn.rollback(savepoint1);
+
+            conn.commit();
+
+            //STEP 6: Clean-up environment
+            rs.close();
+            prs.close();
+            stmt.close();
+            conn.close();
+            pstmt.close();
+            cstmt.close();
+        } catch (SQLException se) {
+            //Handle errors for JDBC
+            /* Methods available */
+            se.getErrorCode();
+            se.getMessage();
+            se.getSQLState();
+            se.getNextException();
+            se.printStackTrace();
+            // se.printStackTrace(PrintStream s);
+            // se.printStackTrace(PrintWriter w);
+        } catch (Exception e) {
+            // TODO: handle exception
+            conn.rollback();
         }
-        //STEP 6: Clean-up environment
-        rs.close();
-        stmt.close();
-        conn.close();
-      }  catch (Exception e) {
-        // TODO: handle exception
-      }
     }
 }
 ```
